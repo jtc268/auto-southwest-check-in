@@ -23,7 +23,7 @@ class Config:
     def __init__(self) -> None:
         # Default values are set
         self.browser_path = None
-        self.check_fares = True
+        self.check_fares = False
         self.notification_24_hour_time = False
         self.notification_level = NotificationLevel.INFO
         self.notification_urls = []

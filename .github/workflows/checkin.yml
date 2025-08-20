@@ -1,0 +1,62 @@
+name: Southwest Check-in
+
+on:
+  schedule:
+    # Run every hour to check for upcoming check-ins
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      confirmation_number:
+        description: 'Confirmation Number'
+        required: true
+      first_name:
+        description: 'First Name'
+        required: true
+      last_name:
+        description: 'Last Name'
+        required: true
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install Chrome
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y chromium-browser chromium-chromedriver
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Run check-in
+      env:
+        AUTO_SOUTHWEST_CHECK_IN_CHECK_FARES: 'false'
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          python southwest.py \
+            --confirmation-number "${{ github.event.inputs.confirmation_number }}" \
+            --first-name "${{ github.event.inputs.first_name }}" \
+            --last-name "${{ github.event.inputs.last_name }}"
+        else
+          # Check for scheduled check-ins from a data source
+          echo "Checking for scheduled check-ins..."
+          # This would read from a database/API to get pending check-ins
+        fi
+    
+    - name: Upload logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: checkin-logs
+        path: |
+          *.log
+          logs/

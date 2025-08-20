@@ -1,0 +1,38 @@
+# Build stage
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY web/package*.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
+
+# Production stage
+FROM node:18-alpine
+WORKDIR /app
+
+# Install Python and dependencies for the check-in script
+RUN apk add --no-cache python3 py3-pip chromium chromium-chromedriver
+
+# Copy Python requirements and install
+COPY requirements.txt /app/
+RUN pip3 install --break-system-packages -r requirements.txt
+
+# Copy the Python check-in script
+COPY lib/ /app/lib/
+COPY southwest.py /app/
+COPY utils/ /app/utils/
+
+# Copy Next.js build
+COPY --from=builder /app/.next /app/web/.next
+COPY --from=builder /app/node_modules /app/web/node_modules
+COPY --from=builder /app/package.json /app/web/
+COPY --from=builder /app/public /app/web/public
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app/web
+EXPOSE 3000
+
+CMD ["npm", "start"]
