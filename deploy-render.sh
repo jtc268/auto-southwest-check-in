@@ -1,0 +1,22 @@
+#!/bin/bash
+# Deploy to Render.com - it actually works
+
+echo "Deploy to Render.com"
+echo "==================="
+echo ""
+echo "1. Go to https://render.com"
+echo "2. Sign in with GitHub"
+echo "3. Click 'New +' -> 'Web Service'"
+echo "4. Connect your GitHub repo"
+echo "5. Use these settings:"
+echo "   - Name: southwest-checkin"
+echo "   - Runtime: Python 3"
+echo "   - Build Command: pip install -r requirements.txt -r requirements-cloud.txt"
+echo "   - Start Command: gunicorn cloud-app:app"
+echo ""
+echo "6. Add environment variables:"
+echo "   - AUTO_SOUTHWEST_CHECK_IN_CHECK_FARES = false"
+echo ""
+echo "7. Click 'Create Web Service'"
+echo ""
+echo "Your app will be live at: https://southwest-checkin.onrender.com"
