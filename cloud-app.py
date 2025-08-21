@@ -73,41 +73,75 @@ def cancel_checkin(checkin_id):
     
     return jsonify({'message': 'Check-in cancelled'})
 
+@app.route('/api/checkins/<checkin_id>/logs', methods=['GET'])
+def get_checkin_logs(checkin_id):
+    """Get logs for a specific check-in"""
+    with check_in_lock:
+        if checkin_id not in check_ins:
+            return jsonify({'error': 'Check-in not found'}), 404
+        
+        checkin = check_ins[checkin_id]
+        return jsonify({
+            'logs': checkin.get('output', []),
+            'status': checkin['status'],
+            'startedAt': checkin.get('startedAt'),
+            'completedAt': checkin.get('completedAt')
+        })
+
 def schedule_checkin(check_in):
     """Schedule a check-in to run at the appropriate time"""
     def run_checkin():
+        checkin = check_ins.get(check_in['id'])
+        if not checkin:
+            return
+        
+        checkin['status'] = 'checking-in'
+        checkin['output'] = []
+        checkin['startedAt'] = datetime.now().isoformat()
+        
         try:
-            # Update status
-            with check_in_lock:
-                check_ins[check_in['id']]['status'] = 'checking-in'
+            print(f"[CHECK-IN START] {check_in['id']} - {check_in['confirmationNumber']}")
+            process = subprocess.Popen(
+                [
+                    'python3', 'southwest.py',
+                    check_in['confirmationNumber'],
+                    check_in['firstName'],
+                    check_in['lastName']
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                env={
+                    **os.environ,
+                    'AUTO_SOUTHWEST_CHECK_IN_CHECK_FARES': 'false'
+                }
+            )
             
-            # Run the actual check-in script
-            result = subprocess.run([
-                'python3', 'southwest.py',
-                check_in['confirmationNumber'],
-                check_in['firstName'],
-                check_in['lastName']
-            ], capture_output=True, text=True, env={
-                **os.environ,
-                'AUTO_SOUTHWEST_CHECK_IN_CHECK_FARES': 'false'
-            })
+            for line in iter(process.stdout.readline, ''):
+                if line:
+                    line = line.strip()
+                    checkin['output'].append({
+                        'timestamp': datetime.now().isoformat(),
+                        'message': line
+                    })
+                    print(f"[CHECK-IN OUTPUT] {check_in['id']}: {line}")
             
-            # Update status based on result
-            with check_in_lock:
-                if result.returncode == 0:
-                    check_ins[check_in['id']]['status'] = 'completed'
-                    check_ins[check_in['id']]['completedAt'] = datetime.now().isoformat()
-                    # Parse boarding position from output if available
-                    if 'Boarding Position' in result.stdout:
-                        check_ins[check_in['id']]['boardingPosition'] = 'A1'  # Parse actual position
-                else:
-                    check_ins[check_in['id']]['status'] = 'failed'
-                    check_ins[check_in['id']]['error'] = result.stderr or 'Unknown error'
+            process.wait()
+            
+            if process.returncode == 0:
+                checkin['status'] = 'completed'
+                checkin['completedAt'] = datetime.now().isoformat()
+                print(f"[CHECK-IN SUCCESS] {check_in['id']}")
+            else:
+                checkin['status'] = 'failed'
+                checkin['error'] = 'Check-in process failed'
+                print(f"[CHECK-IN FAILED] {check_in['id']}")
         
         except Exception as e:
-            with check_in_lock:
-                check_ins[check_in['id']]['status'] = 'failed'
-                check_ins[check_in['id']]['error'] = str(e)
+            checkin['status'] = 'failed'
+            checkin['error'] = str(e)
+            print(f"[CHECK-IN ERROR] {check_in['id']}: {str(e)}")
     
     # For demo, run immediately. In production, use a proper scheduler
     threading.Timer(5.0, run_checkin).start()
