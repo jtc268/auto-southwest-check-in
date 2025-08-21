@@ -136,18 +136,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">System Status</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className={`p-4 rounded-lg border ${systemStatus?.nas.connected ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-              <div className="flex items-center justify-between">
-                <span className="font-medium">NAS</span>
-                <span className={`text-sm ${systemStatus?.nas.connected ? 'text-green-600' : 'text-red-600'}`}>
-                  {systemStatus?.nas.connected ? '● Connected' : '● Disconnected'}
-                </span>
-              </div>
-              <div className="text-sm text-gray-600 mt-1">
-                Active: {systemStatus?.nas.activeCheckIns || 0} check-ins
-              </div>
-            </div>
+          <div className="grid grid-cols-1 gap-4">
             <div className={`p-4 rounded-lg border ${systemStatus?.cloud.connected ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
               <div className="flex items-center justify-between">
                 <span className="font-medium">Cloud (Vercel)</span>
@@ -271,9 +260,6 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        {checkIn.source.toUpperCase()}
-                      </span>
                       {['pending', 'scheduled', 'checking-in'].includes(checkIn.status) && (
                         <button
                           onClick={() => handleCancel(checkIn.id)}
