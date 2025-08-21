@@ -6,6 +6,40 @@ import axios from 'axios'
 import { CheckIn, SystemStatus } from '@/lib/types'
 import { format } from 'date-fns'
 
+function LogViewer({ id }: { id: string }) {
+  const [lines, setLines] = useState<string[]>([])
+  const [status, setStatus] = useState<string>('')
+
+  useEffect(() => {
+    let active = true
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/checkins/${id}?logs=1`, { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!active) return
+        setStatus(data.status)
+        const msgs: string[] = (data.logs || []).map((l: any) => `${l.timestamp}  ${l.message}`)
+        setLines(msgs)
+      } catch {}
+    }
+    load()
+    const t = setInterval(load, 1000)
+    return () => { active = false; clearInterval(t) }
+  }, [id])
+
+  if (!lines.length) return null
+
+  return (
+    <div className="mt-2 border rounded bg-gray-50">
+      <div className="px-2 py-1 text-xs text-gray-600 border-b">Logs (status: {status})</div>
+      <pre className="p-2 text-xs whitespace-pre-wrap leading-5 max-h-64 overflow-auto">
+        {lines.join('\n')}
+      </pre>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const [checkIns, setCheckIns] = useState<CheckIn[]>([])
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
@@ -255,6 +289,9 @@ export default function Dashboard() {
                             <div className="text-sm text-red-600 mt-1">
                               Error: {checkIn.error}
                             </div>
+                          )}
+                          {['checking-in','completed','failed'].includes(checkIn.status) && (
+                            <LogViewer id={checkIn.id} />
                           )}
                         </div>
                       </div>

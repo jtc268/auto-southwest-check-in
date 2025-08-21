@@ -11,6 +11,10 @@ export interface CheckIn {
   createdAt: string
   updatedAt: string
   source: 'nas' | 'cloud'
+  // Real-time observability fields
+  startedAt?: string
+  completedAt?: string
+  output?: { timestamp: string; message: string }[]
 }
 
 export interface CheckInRequest {
